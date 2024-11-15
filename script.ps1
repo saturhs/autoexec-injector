@@ -124,7 +124,7 @@ function Get-CSGOPath {
         # Znajdź linie z AppID gry 730 w sekcji "apps"
         elseif ($line -match $appRegex -and $currentPath) {
             # Jeśli znaleziono grę, zbuduj ścieżkę do katalogu CS:GO #TODO
-            $cs2path = Join-Path -Path $currentPath -ChildPath "\common\Counter-Strike Global Offensive\game\core\cfg"
+            $cs2path = "$currentPath\common\Counter-Strike Global Offensive\game\core\cfg" -replace "\\\\", "\\"
             Write-Host "Znaleziono ścieżkę do CS:GO: $cs2path" -ForegroundColor Green
             break
         }

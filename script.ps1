@@ -18,12 +18,12 @@ $statusLabel.Location = New-Object System.Drawing.Point(10, 10)
 $statusLabel.Text = "Status:"
 
 ####
-$librarypath = New-Object System.Windows.Forms.Label
+$librarypath = New-Object System.Windows.Forms.TextBox
 $librarypath.Multiline = $true
 $librarypath.ReadOnly = $true
-$librarypath.TabStop = $false # Wyłączenie kursora w TextBox
-$librarypath.BorderStyle = [System.Windows.Forms.BorderStyle]::None # Brak obramowania
-$librarypath.BackColor = $Form.BackColor # Dopasowanie tła do formularza
+$librarypath.TabStop = $false
+$librarypath.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+$librarypath.BackColor = $Form.BackColor
 $librarypath.Size = New-Object System.Drawing.Size(380, 100)
 $librarypath.Location = New-Object System.Drawing.Point(250, 40)
 $librarypath.Font = New-Object System.Drawing.Font('Consolas', 12)

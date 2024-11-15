@@ -197,5 +197,11 @@ $Form.Controls.Add($status)
 $Form.Controls.Add($librarypath)
 $Form.Controls.Add($statusLabel)
 $Form.Controls.Add($button)
+if($autoexecPath){
+    InjectAutoexec
+}
+else{
+    return
+}
 
 $Form.ShowDialog()

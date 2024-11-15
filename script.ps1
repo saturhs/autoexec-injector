@@ -151,6 +151,47 @@ if ($libraryFoldersPath) {
     }
 }
 
+function InjectAutoexec {
+    param (
+        [string]$autoexecPath,
+        [string]$cs2path
+    )
+
+    # Sprawdzenie, czy oba parametry są prawidłowe
+    if (-not $autoexecPath -or -not $cs2path) {
+        Write-Host "Błąd: Brakuje ścieżki do pliku lub CS:GO." -ForegroundColor Red
+        return
+    }
+
+    # Sprawdzenie, czy podana ścieżka do autoexec istnieje
+    if (Test-Path $autoexecPath) {
+        $autoexecContent = Get-Content $autoexecPath
+        if ($autoexecContent) {
+            # Cel przeniesienia: folder CS:GO
+            $destinationPath = Join-Path -Path $cs2path -ChildPath "cfg\autoexec.cfg"
+
+            # Sprawdzenie, czy folder docelowy istnieje
+            if (-not (Test-Path -Path (Join-Path -Path $cs2path -ChildPath "cfg"))) {
+                Write-Host "Folder 'cfg' w CS:GO nie istnieje. Tworzę go..." -ForegroundColor Yellow
+                New-Item -ItemType Directory -Path (Join-Path -Path $cs2path -ChildPath "cfg") | Out-Null
+            }
+
+            # Przeniesienie pliku
+            try {
+                Move-Item -Path $autoexecPath -Destination $destinationPath -Force
+                Write-Host "Plik został pomyślnie przeniesiony do: $destinationPath" -ForegroundColor Green
+            } catch {
+                Write-Host "Błąd: Nie udało się przenieść pliku. Szczegóły: $_" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "Plik $autoexecPath jest pusty lub nie można go odczytać." -ForegroundColor Red
+        }
+    } else {
+        Write-Host "Błąd: Plik $autoexecPath nie istnieje." -ForegroundColor Red
+    }
+}
+
+
 # Dodanie elementów do formularza
 #$Form.Controls.Add($button)
 Test-Path "C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf"

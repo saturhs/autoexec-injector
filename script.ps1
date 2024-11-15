@@ -19,7 +19,7 @@ $statusLabel.Text = "Status:"
 
 ####
 $librarypath = New-Object System.Windows.Forms.TextBox
-$librarypath.Multiline = $true
+#$librarypath.Multiline = $true
 $librarypath.ReadOnly = $true
 $librarypath.TabStop = $false
 $librarypath.BorderStyle = [System.Windows.Forms.BorderStyle]::None

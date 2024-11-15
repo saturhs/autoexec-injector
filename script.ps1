@@ -18,14 +18,14 @@ $statusLabel.Location = New-Object System.Drawing.Point(10, 10)
 $statusLabel.Text = "Status:"
 
 ####
-$librarypath = New-Object System.Windows.Forms.TextBox
+$librarypath = New-Object System.Windows.Forms.Label
 $librarypath.Multiline = $true
 $librarypath.ReadOnly = $true
 $librarypath.TabStop = $false # Wyłączenie kursora w TextBox
 $librarypath.BorderStyle = [System.Windows.Forms.BorderStyle]::None # Brak obramowania
 $librarypath.BackColor = $Form.BackColor # Dopasowanie tła do formularza
 $librarypath.Size = New-Object System.Drawing.Size(380, 100)
-$librarypath.Location = New-Object System.Drawing.Point(10, 40)
+$librarypath.Location = New-Object System.Drawing.Point(250, 40)
 $librarypath.Font = New-Object System.Drawing.Font('Consolas', 12)
 $librarypath.Text = "Status: Proszę czekać..." # Tekst początkowy
 ####
@@ -57,21 +57,62 @@ if ($cs2path) {
 $button = New-Object System.Windows.Forms.Button
 $button.Text = "Wybierz plik autoexec..."
 $button.Size = New-Object System.Drawing.Size(150, 30)
-$button.Location = New-Object System.Drawing.Point(($windowWidth - $button.Width) / 2, ($windowHeight - $button.Height) / 2)
+$button.Location = New-Object System.Drawing.Point(200, 200)
 
 # Otwieranie pliku autoexec
 $button.Add_Click({
     $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-    $OpenFileDialog.InitialDirectory = $env:USERPROFILE
+    $OpenFileDialog.InitialDirectory = $env:USERPROFILE+"\Downloads"
     $OpenFileDialog.Filter = "Config files (*.cfg) | *.cfg"
     $OpenFileDialog.Title = "Wybierz plik cfg"
 
     if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         [System.Windows.Forms.MessageBox]::Show("Wybrano plik: " + $OpenFileDialog.FileName)
         $autoexecPath = $OpenFileDialog.FileName
+
         return $autoexecPath
     }
 })
+function InjectAutoexec {
+    param (
+        [string]$autoexecPath,
+        [string]$cs2path
+    )
+
+    # Sprawdzenie, czy oba parametry są prawidłowe
+    if (-not $autoexecPath -or -not $cs2path) {
+        Write-Host "Błąd: Brakuje ścieżki do pliku lub CS:GO." -ForegroundColor Red
+        return
+    }
+
+    # Sprawdzenie, czy podana ścieżka do autoexec istnieje
+    if (Test-Path $autoexecPath) {
+        $autoexecContent = Get-Content $autoexecPath
+        if ($autoexecContent) {
+            # Cel przeniesienia: folder CS:GO
+            $destinationPath = Join-Path -Path $cs2path -ChildPath "cfg\autoexec.cfg"
+
+            # Sprawdzenie, czy folder docelowy istnieje
+            if (-not (Test-Path -Path (Join-Path -Path $cs2path -ChildPath "cfg"))) {
+                Write-Host "Folder 'cfg' w CS:GO nie istnieje. Tworzę go..." -ForegroundColor Yellow
+                New-Item -ItemType Directory -Path (Join-Path -Path $cs2path -ChildPath "cfg") | Out-Null
+            }
+
+            # Przeniesienie pliku
+            try {
+                Move-Item -Path $autoexecPath -Destination $destinationPath -Force
+                Write-Host "Plik został pomyślnie przeniesiony do: $destinationPath" -ForegroundColor Green
+            } catch {
+                Write-Host "Błąd: Nie udało się przenieść pliku. Szczegóły: $_" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "Plik $autoexecPath jest pusty lub nie można go odczytać." -ForegroundColor Red
+        }
+    } else {
+        Write-Host "Błąd: Plik $autoexecPath nie istnieje." -ForegroundColor Red
+    }
+}
+
 
 # Funkcja do pobrania ścieżki Steam z rejestru
 function Get-SteamInstallPath {
@@ -121,7 +162,7 @@ function Get-CSGOPath {
         }
         # Znajdź linie z AppID gry 730 w sekcji "apps"
         elseif ($line -match $appRegex -and $currentPath) {
-            # Jeśli znaleziono grę, zbuduj ścieżkę do katalogu CS:GO
+            # Jeśli znaleziono grę, zbuduj ścieżkę do katalogu CS:GO #TODO
             $cs2path = Join-Path -Path $currentPath -ChildPath "common\Counter-Strike Global Offensive"
             Write-Host "Znaleziono ścieżkę do CS:GO: $cs2path" -ForegroundColor Green
             break
@@ -153,5 +194,8 @@ if ($libraryFoldersPath) {
 #$Form.Controls.Add($button)
 Test-Path "C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf"
 $Form.Controls.Add($status)
+$Form.Controls.Add($librarypath)
 $Form.Controls.Add($statusLabel)
+$Form.Controls.Add($button)
+
 $Form.ShowDialog()

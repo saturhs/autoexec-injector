@@ -81,10 +81,10 @@ function Get-SteamInstallPath {
     $installPath = (Get-ItemProperty -Path $registeryPath -Name InstallPath -ErrorAction SilentlyContinue).InstallPath
     if ($installPath) {
         $libraryFoldersPath = Join-Path -Path $installPath -ChildPath "steamapps\libraryfolders.vdf"
-        Write-Host "cwel jebany es"
-        return $librarypath.Text = $libraryFoldersPath
+        $librarypath.Text = "Ścieżka do bibliotek Steam: $libraryFoldersPath"
+        return $libraryFoldersPath
     } else {
-        $librarypath.Text = "Status: Not found"
+        $librarypath.Text = "Błąd: Nie znaleziono Steam."
         return ""
     }
 }

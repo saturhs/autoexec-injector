@@ -200,7 +200,8 @@ $Form.Controls.Add($librarypath)
 $Form.Controls.Add($statusLabel)
 $Form.Controls.Add($button)
 #InjectAutoexec
-$cs2path = $cs2path -replace "\\\\", "\\"
+$cs2path = [System.IO.Path]::GetFullPath($cs2path)
+
 Write-Host "Ścieżka do CS:GO: $cs2path"
 
 $Form.ShowDialog()

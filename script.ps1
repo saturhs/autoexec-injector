@@ -69,7 +69,7 @@ $button.Add_Click({
     if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         [System.Windows.Forms.MessageBox]::Show("Wybrano plik: " + $OpenFileDialog.FileName)
         $autoexecPath = $OpenFileDialog.FileName
-        #InjectAutoexec
+        InjectAutoexec
         return $autoexecPath
     }
 })

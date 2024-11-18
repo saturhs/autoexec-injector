@@ -17,19 +17,19 @@ $statusLabel.AutoSize = $true
 $statusLabel.Location = New-Object System.Drawing.Point(10, 10)
 $statusLabel.Text = "Status:"
 
-####
-$librarypath = New-Object System.Windows.Forms.TextBox
-#$librarypath.Multiline = $true
-$librarypath.ReadOnly = $true
-$librarypath.TabStop = $false
-$librarypath.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$librarypath.BackColor = $Form.BackColor
-$librarypath.Size = New-Object System.Drawing.Size(380, 100)
-$librarypath.Location = New-Object System.Drawing.Point(250, 40)
-$librarypath.Font = New-Object System.Drawing.Font('Consolas', 12)
-$librarypath.Text = "Status: Proszę czekać..." # Tekst początkowy
-####
 
+
+# Tworzenie TextBox jako etykiety
+$steamLibraryTextbox = New-Object System.Windows.Forms.TextBox
+$steamLibraryTextbox.Multiline = $true
+$steamLibraryTextbox.ReadOnly = $true
+$steamLibraryTextbox.TabStop = $false # Wyłączenie kursora w TextBox
+$steamLibraryTextbox.BorderStyle = [System.Windows.Forms.BorderStyle]::None # Brak obramowania
+$steamLibraryTextbox.BackColor = $Form.BackColor # Dopasowanie tła do formularza
+$steamLibraryTextbox.Size = New-Object System.Drawing.Size(380, 100)
+$steamLibraryTextbox.Location = New-Object System.Drawing.Point(10, 90)
+$steamLibraryTextbox.Font = New-Object System.Drawing.Font('Consolas', 12)
+$steamLibraryTextbox.Text = "Please wait..." # Tekst początkowy
 
 # Tworzenie TextBox jako etykiety
 $status = New-Object System.Windows.Forms.TextBox
@@ -41,18 +41,12 @@ $status.BackColor = $Form.BackColor # Dopasowanie tła do formularza
 $status.Size = New-Object System.Drawing.Size(380, 100)
 $status.Location = New-Object System.Drawing.Point(10, 40)
 $status.Font = New-Object System.Drawing.Font('Consolas', 12)
-$status.Text = "Czekam na ścieżkę..." # Tekst początkowy
+$status.Text = "Please wait..." # Tekst początkowy
 
-# Warunek: jeśli $cs2path istnieje
-if ($cs2path) {
-    # Zaktualizuj TextBox i wyświetl w konsoli
-    $status.Text = $cs2path
-    Write-Host "Scieżka do CS:GO: $cs2path"
-} else {
-    # Jeśli nie ma ścieżki, wyświetl komunikat o błędzie
-    $status.Text = "Nie znaleziono sciezki do CS:GO"
-    Write-Host "Nie znaleziono CS:GO w bibliotekach Steam."
-}
+$chosenFileLabel = New-Object System.Windows.Forms.Label
+$chosenFileLabel.Text = "Wybrany plik: $autoexecPath"
+$chosenFileLabel.Location = New-Object System.Drawing.Point(10, 200)
+$chosenFileLabel.Size = New-Object System.Drawing.Size(180, 40)
 
 $button = New-Object System.Windows.Forms.Button
 $button.Text = "Wybierz plik autoexec..."
@@ -64,15 +58,56 @@ $button.Add_Click({
     $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $OpenFileDialog.InitialDirectory = $env:USERPROFILE+"\Downloads"
     $OpenFileDialog.Filter = "Config files (*.cfg) | *.cfg"
-    $OpenFileDialog.Title = "Wybierz plik cfg"
+    $OpenFileDialog.Title = "Chose cfg file"
 
     if ($OpenFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         [System.Windows.Forms.MessageBox]::Show("Wybrano plik: " + $OpenFileDialog.FileName)
-        $autoexecPath = $OpenFileDialog.FileName
-        InjectAutoexec
+        $global:autoexecPath = $OpenFileDialog.FileName
+        Write-Host "Chosen file: $autoexecPath"
+        Write-Host "Chosen CS:GO folder: $cs2path"
+        $Form.Controls.Add($chosenFileLabel)
         return $autoexecPath
     }
 })
+function InjectAutoexec {
+    param (
+        [string]$autoexecPath,
+        [string]$cs2path
+    )
+
+    # Sprawdzenie, czy oba parametry są prawidłowe
+    if (-not $autoexecPath -or -not $cs2path) {
+        Write-Host "Error: Both cfg file and CS:GO folder path must be provided." -ForegroundColor Red
+        return
+    }
+
+    # Sprawdzenie, czy podana ścieżka do autoexec istnieje
+    if (Test-Path $autoexecPath) {
+        $autoexecContent = Get-Content $autoexecPath
+        if ($autoexecContent) {
+            # Cel przeniesienia: folder CS:GO
+            $destinationPath = Join-Path -Path $cs2path -ChildPath "cfg\autoexec.cfg"
+
+            # Sprawdzenie, czy folder docelowy istnieje
+            if (-not (Test-Path -Path (Join-Path -Path $cs2path -ChildPath "cfg"))) {
+                Write-Host "Folder cfg does not exist, creating one... " -ForegroundColor Yellow
+                New-Item -ItemType Directory -Path (Join-Path -Path $cs2path -ChildPath "cfg") | Out-Null
+            }
+
+            # Przeniesienie pliku
+            try {
+                Copy-Item -Path $autoexecPath -Destination $destinationPath -Force
+                Write-Host "File was successfully copied to: $destinationPath" -ForegroundColor Green
+            } catch {
+                Write-Host "Error copying file, details: $_" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "File $autoexecPath is empty and cannot be processed." -ForegroundColor Red
+        }
+    } else {
+        Write-Host "Error: File $autoexecPath does not exist." -ForegroundColor Red
+    }
+}
 
 
 # Funkcja do pobrania ścieżki Steam z rejestru
@@ -81,10 +116,13 @@ function Get-SteamInstallPath {
     $installPath = (Get-ItemProperty -Path $registeryPath -Name InstallPath -ErrorAction SilentlyContinue).InstallPath
     if ($installPath) {
         $libraryFoldersPath = Join-Path -Path $installPath -ChildPath "steamapps\libraryfolders.vdf"
-        $librarypath.Text = "Ścieżka do bibliotek Steam: $libraryFoldersPath"
+        Write-Host "cwel jebany es"
+        $index = $libraryFoldersPath.IndexOf("Steam")
+        $steamPath = $libraryFoldersPath.Substring(0, $index + "Steam".Length)
+        $steamLibraryTextbox.Text = "Steam path: " + $steamPath
         return $libraryFoldersPath
     } else {
-        $librarypath.Text = "Błąd: Nie znaleziono Steam."
+        $librarypath.Text = "Status: Not found"
         return ""
     }
 }
@@ -124,7 +162,7 @@ function Get-CSGOPath {
         # Znajdź linie z AppID gry 730 w sekcji "apps"
         elseif ($line -match $appRegex -and $currentPath) {
             # Jeśli znaleziono grę, zbuduj ścieżkę do katalogu CS:GO #TODO
-            $cs2path = "$currentPath\\common\\Counter-Strike Global Offensive\\game\\core\\cfg\\" -replace "\\\\", "\\"
+            $cs2path = Join-Path -Path $currentPath -ChildPath "common\Counter-Strike Global Offensive"
             Write-Host "Znaleziono ścieżkę do CS:GO: $cs2path" -ForegroundColor Green
             break
         }
@@ -145,63 +183,28 @@ $libraryFoldersPath = Get-SteamInstallPath
 if ($libraryFoldersPath) {
     $cs2path = Get-CSGOPath -libraryFoldersPath $libraryFoldersPath
     if ($cs2path) {
-        Write-Host "Ścieżka do CS:GO: $cs2path"
+        $status.Text = "Sciezka do CS:GO: $cs2path"
+        Write-Host "Sciezka do CS:GO: $cs2path"
     } else {
+        $status.Text = "Nie znaleziono sciezki do CS:GO"
         Write-Host "Nie znaleziono CS:GO w bibliotekach Steam."
     }
 }
 
-function InjectAutoexec {
-    param (
-        [string]$autoexecPath,
-        [string]$cs2path
-    )
+$buttonExecute = New-Object System.Windows.Forms.Button
+$buttonExecute.Text = "Go"
+$buttonExecute.Size = New-Object System.Drawing.Size(150, 30)
+$buttonExecute.Location = New-Object System.Drawing.Point(150, 150)
 
-    # Sprawdzenie, czy oba parametry są prawidłowe
-    if (-not $autoexecPath -or -not $cs2path) {
-        Write-Host "Błąd: Brakuje ścieżki do pliku lub CS:GO." -ForegroundColor Red
-        return
-    }
-
-    # Sprawdzenie, czy podana ścieżka do autoexec istnieje
-    if (Test-Path $autoexecPath) {
-        $autoexecContent = Get-Content $autoexecPath
-        if ($autoexecContent) {
-            # Cel przeniesienia: folder CS:GO
-            $destinationPath = Join-Path -Path $cs2path -ChildPath "cfg\autoexec.cfg"
-
-            # Sprawdzenie, czy folder docelowy istnieje
-            if (-not (Test-Path -Path (Join-Path -Path $cs2path -ChildPath "cfg"))) {
-                Write-Host "Folder 'cfg' w CS:GO nie istnieje. Tworzę go..." -ForegroundColor Yellow
-                New-Item -ItemType Directory -Path (Join-Path -Path $cs2path -ChildPath "cfg") | Out-Null
-            }
-
-            # Przeniesienie pliku
-            try {
-                Move-Item -Path $autoexecPath -Destination $destinationPath -Force
-                Write-Host "Plik został pomyślnie przeniesiony do: $destinationPath" -ForegroundColor Green
-            } catch {
-                Write-Host "Błąd: Nie udało się przenieść pliku. Szczegóły: $_" -ForegroundColor Red
-            }
-        } else {
-            Write-Host "Plik $autoexecPath jest pusty lub nie można go odczytać." -ForegroundColor Red
-        }
-    } else {
-        Write-Host "Błąd: Plik $autoexecPath nie istnieje." -ForegroundColor Red
-    }
-}
-
+$buttonExecute.Add_Click({
+    InjectAutoexec -autoexecPath $autoexecPath -cs2path $cs2path
+})
 
 # Dodanie elementów do formularza
-#$Form.Controls.Add($button)
-Test-Path "C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf"
-$Form.Controls.Add($status)
-$Form.Controls.Add($librarypath)
+$Form.Controls.Add($buttonExecute)
+$Form.Controls.Add($steamLibraryTextbox)
 $Form.Controls.Add($statusLabel)
+$Form.Controls.Add($status)
 $Form.Controls.Add($button)
-#InjectAutoexec
-$cs2path = [System.IO.Path]::GetFullPath($cs2path)
-
-Write-Host "Ścieżka do CS:GO: $cs2path"
 
 $Form.ShowDialog()
